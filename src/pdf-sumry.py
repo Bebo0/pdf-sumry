@@ -1,6 +1,5 @@
 from io import StringIO
 
-BOOK_PATH = "../Complete_Course_In_Astrobiology.pdf"
 import re
 import pdfminer
 import nltk
@@ -14,6 +13,8 @@ from pdfminer.pdfparser import PDFParser
 from collections import defaultdict
 import heapq
 
+BOOK_PATH = "../How_To_Win_Friends_And_Influence_People.pdf"
+
 
 class RangeOfPages:
     """
@@ -25,7 +26,7 @@ class RangeOfPages:
         self.end = end
 
 
-def extractTextFromPDF(pdf=BOOK_PATH, range=RangeOfPages()):
+def extractTextFromPDF(pdf, range=RangeOfPages()):
     """
 
     Args:
@@ -46,7 +47,7 @@ def extractTextFromPDF(pdf=BOOK_PATH, range=RangeOfPages()):
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         currPageNumber = 0
         for page in PDFPage.create_pages(doc):
-            if range.start <= currPageNumber <= range.end:
+            if range.start <= currPageNumber <= range.end:  # only process pages within the range
                 interpreter.process_page(page)
             currPageNumber += 1
 
@@ -70,62 +71,84 @@ def createSummaryTextFile(summarySentences, pathToPDF):
     f.close()
 
 
-def summarize(pdfText):
+def summarize(pdfText, numOfSentencesInSummary):
     """ Summarizes the text by scoring every sentence
 
+    First pre-process the words and sentences, then score the words, then score the sentences, and finally output
+    the best scored sentences into a summary.
 
     Args:
         pdfText: the pdf in string format to be summarized
+        numOfSentencesInSummary: the number of sentences wanted in the summary
 
-    Returns: ListOfStrings that represent the sentences in the summary, ordered by their score
+    Returns: ListOfStrings that represent the sentences in the summary, ordered by their score and index
 
     """
-    wordsOnly = re.sub('[^a-zA-Z]', ' ', pdfText)
-    wordsOnly = re.sub(r'\s+', ' ', wordsOnly)
 
-    sentences = re.sub('[^a-zA-Z0-9.]', ' ', pdfText)
-    sentences = re.sub(r'\s+', ' ', sentences)
+    def preProcessWords():
+        # remove all non-letter characters such that the result is only words
+        wordsOnly = re.sub('[^a-zA-Z]', ' ', pdfText)
+        wordsOnly = re.sub(r'\s+', ' ', wordsOnly)
+        return nltk.word_tokenize(wordsOnly.lower())
 
-    sentences = nltk.sent_tokenize(sentences.strip())
+    def preProcessSentences():
+        # remove all non-letter characters except for dots and semi colons which represent sentence boundaries
+        sentences = re.sub('[^a-zA-Z0-9.;]', ' ', pdfText)
+        sentences = re.sub(r'\s+', ' ', sentences)
+        return nltk.sent_tokenize(sentences.strip())
 
-    stopwords = nltk.corpus.stopwords.words('english')
-    stopwords.append("cid")
-    wordFrequency = defaultdict(int)
+    def scoreWords(wordsOnly):
+        stopwords = nltk.corpus.stopwords.words('english')  # don't score words such as [a, an, the, it] etc.
+        stopwords.append("cid")
 
-    wordsOnly = wordsOnly.lower()
-    wordsOnly = nltk.word_tokenize(wordsOnly)
+        wordFrequency = defaultdict(int)
+        for word in wordsOnly:
+            if word not in stopwords and len(word) > 1:
+                wordFrequency[word] += 1
 
-    for word in wordsOnly:
-        if word not in stopwords and len(word) > 1:
-            wordFrequency[word] += 1
+        maxFrequency = max(wordFrequency.values())
 
-    maxFrequency = max(wordFrequency.values())
+        # score words in a normalized way
+        for word, frequency in wordFrequency.items():
+            wordFrequency[word] = (frequency / maxFrequency)
 
-    for word, frequency in wordFrequency.items():
-        wordFrequency[word] = (frequency / maxFrequency)
+        return wordFrequency
 
-    heap = []
-    sentenceIndex = defaultdict(int)
-    for idx, sentence in enumerate(sentences):
-        score = 0
-        for word in nltk.word_tokenize(sentence.lower()):
-            if word in wordFrequency and len(sentence.split(' ')) < 30:
-                score += wordFrequency[word]
-        heapq.heappush(heap, (-score, sentence))
-        sentenceIndex[sentence] = idx
+    def scoreSentences(sentences, wordScore):
+        # score sentences using the scores of their constituent words
+        heap = []
+        sentenceIndex = defaultdict(int)
+        for idx, sentence in enumerate(sentences):
+            score = 0
+            for word in nltk.word_tokenize(sentence.lower()):
+                if word in wordScore and len(sentence.split(' ')) < 30:
+                    score += wordScore[word]
+            heapq.heappush(heap, (-score, sentence))  # use min heap to keep track of the highest scoring sentences
+            sentenceIndex[sentence] = idx  # keep track of where this sentence appeared from the beginning of the text
+        return heap, sentenceIndex
 
-    summarySentences = heapq.nsmallest(30, heap)
-    summarySentences.sort(key=lambda s: sentenceIndex[s[1]])
+    def findBestSentences(highestScored, indices):
+        # find the highest scored sentences
+        summarySentences = heapq.nsmallest(numOfSentencesInSummary, highestScored)
+        # then sort them by the order of their appearance
+        summarySentences.sort(key=lambda s: indices[s[1]])
+        return summarySentences
+
+    wordsOnly = preProcessWords()
+    sentences = preProcessSentences()
+    wordScores = scoreWords(wordsOnly)
+    highestScored, indices = scoreSentences(sentences, wordScores)
+    summarySentences = findBestSentences(highestScored, indices)
 
     return summarySentences
 
 
 def main():
-    range = RangeOfPages(19)
+    range = RangeOfPages(19, 10000)
     pathToPDF = BOOK_PATH
     pdfText = extractTextFromPDF(pathToPDF, range)
 
-    summarySentences = summarize(pdfText)
+    summarySentences = summarize(pdfText, 25)
     createSummaryTextFile(summarySentences, pathToPDF)
 
 
