@@ -1,5 +1,3 @@
-from pdfminer.high_level import extract_text, extract_pages
-# import pdfminer.high_level
 from io import StringIO
 
 BOOK_PATH = "../Complete_Course_In_Astrobiology.pdf"
@@ -21,7 +19,8 @@ class RangeOfPages:
     """
     Defines the range of pages that should be extracted from the pdf. Default value extracts all pages.
     """
-    def __init__(self, start=0, end=10**5):
+
+    def __init__(self, start=0, end=10 ** 5):
         self.start = start
         self.end = end
 
@@ -40,7 +39,6 @@ def extractTextFromPDF(pdf=BOOK_PATH, range=RangeOfPages()):
     with open(pdf, 'rb') as in_file:
         parser = PDFParser(in_file)
         doc = PDFDocument(parser)
-        # outlines = doc.get_outlines()
         rsrcmgr = PDFResourceManager()
         laParams = pdfminer.layout.LAParams()
         setattr(laParams, 'all_texts', True)
@@ -96,7 +94,6 @@ def summarize(pdfText):
 
     wordsOnly = wordsOnly.lower()
     wordsOnly = nltk.word_tokenize(wordsOnly)
-    # print(wordsOnly)
 
     for word in wordsOnly:
         if word not in stopwords and len(word) > 1:
@@ -107,10 +104,8 @@ def summarize(pdfText):
     for word, frequency in wordFrequency.items():
         wordFrequency[word] = (frequency / maxFrequency)
 
-    sentenceScores = defaultdict(int)
     heap = []
     sentenceIndex = defaultdict(int)
-    print(sentenceScores[0])
     for idx, sentence in enumerate(sentences):
         score = 0
         for word in nltk.word_tokenize(sentence.lower()):
@@ -120,9 +115,7 @@ def summarize(pdfText):
         sentenceIndex[sentence] = idx
 
     summarySentences = heapq.nsmallest(30, heap)
-    summarySentences.sort(key=lambda s: sentenceIndex[s])
-    print(summarySentences)
-
+    summarySentences.sort(key=lambda s: sentenceIndex[s[1]])
 
     return summarySentences
 
@@ -134,5 +127,6 @@ def main():
 
     summarySentences = summarize(pdfText)
     createSummaryTextFile(summarySentences, pathToPDF)
+
 
 main()
