@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# testing books
+*.pdf
+
+# pyenv
+Pipfile
+
+.DS*
+.idea*
