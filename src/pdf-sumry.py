@@ -9,11 +9,17 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
+import logging
 
 from collections import defaultdict
 import heapq
 nltk.download("stopwords")
 nltk.download("punkt")
+
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger("pdf_sumry")
+logger.setLevel(logging.DEBUG)
+# logger.
 
 BOOK_PATH = "./test.pdf"
 
@@ -37,7 +43,7 @@ def extractTextFromPDF(pdf, range=RangeOfPages()):
     Returns: one unclean string representing ALL the text extracted from the pdf
 
     """
-    
+    logger.info("Extracting text from pdf...")
     pdfText = StringIO()
     with open(pdf, 'rb') as in_file:
         parser = PDFParser(in_file)
@@ -52,7 +58,7 @@ def extractTextFromPDF(pdf, range=RangeOfPages()):
             if range.start <= currPageNumber <= range.end:  # only process pages within the range
                 interpreter.process_page(page)
             currPageNumber += 1
-
+        logger.info("Successfully extracted text!")
         return pdfText.getvalue()
 
 
@@ -71,6 +77,8 @@ def createSummaryTextFile(summarySentences, pathToPDF):
     for score, sentence in summarySentences:
         f.write(sentence + "\n")
     f.close()
+    logger.info("Successfully created text file {}!".format(name))
+
 
 
 def summarize(pdfText, numOfSentencesInSummary):
@@ -86,6 +94,7 @@ def summarize(pdfText, numOfSentencesInSummary):
     Returns: ListOfStrings that represent the sentences in the summary, ordered by their score and index
 
     """
+    logger.info("Summarizing...")
 
     def preProcessWords():
         # remove all non-letter characters such that the result is only words
@@ -110,7 +119,7 @@ def summarize(pdfText, numOfSentencesInSummary):
 
         maxFrequency = max(wordFrequency.values())
 
-        # score words in a normalized way
+        # score words normalized under 1
         for word, frequency in wordFrequency.items():
             wordFrequency[word] = (frequency / maxFrequency)
 
@@ -142,6 +151,7 @@ def summarize(pdfText, numOfSentencesInSummary):
     highestScored, indices = scoreSentences(sentences, wordScores)
     summarySentences = findBestSentences(highestScored, indices)
 
+    logger.info("Successfully summarized text!")
     return summarySentences
 
 
