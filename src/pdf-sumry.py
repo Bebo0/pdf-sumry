@@ -12,13 +12,14 @@ from pdfminer.pdfparser import PDFParser
 
 from collections import defaultdict
 import heapq
+nltk.download("stopwords")
+nltk.download("punkt")
 
-BOOK_PATH = "../How_To_Win_Friends_And_Influence_People.pdf"
+BOOK_PATH = "./test.pdf"
 
 
 class RangeOfPages:
-    """
-    Defines the range of pages that should be extracted from the pdf. Default value extracts all pages.
+    """ Defines the range of pages that should be extracted from the pdf. Default value extracts all pages.
     """
 
     def __init__(self, start=0, end=10 ** 5):
@@ -36,6 +37,7 @@ def extractTextFromPDF(pdf, range=RangeOfPages()):
     Returns: one unclean string representing ALL the text extracted from the pdf
 
     """
+    
     pdfText = StringIO()
     with open(pdf, 'rb') as in_file:
         parser = PDFParser(in_file)
@@ -144,7 +146,7 @@ def summarize(pdfText, numOfSentencesInSummary):
 
 
 def main():
-    range = RangeOfPages(19, 10000)
+    range = RangeOfPages(0, 10000)
     pathToPDF = BOOK_PATH
     pdfText = extractTextFromPDF(pathToPDF, range)
 
