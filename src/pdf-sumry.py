@@ -1,25 +1,30 @@
-from io import StringIO
 
 import re
 import pdfminer
 import nltk
+import heapq
+import logging
+
+from io import StringIO
+from nltk.stem import WordNetLemmatizer
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
-import logging
-
 from collections import defaultdict
-import heapq
+
 nltk.download("stopwords")
 nltk.download("punkt")
+nltk.download("wordnet")
 
+lemmatizer = WordNetLemmatizer()
+
+# Logging
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger("pdf_sumry")
 logger.setLevel(logging.DEBUG)
-# logger.
 
 BOOK_PATH = "./test.pdf"
 
@@ -114,8 +119,9 @@ def summarize(pdfText, numOfSentencesInSummary):
 
         wordFrequency = defaultdict(int)
         for word in wordsOnly:
-            if word not in stopwords and len(word) > 1:
-                wordFrequency[word] += 1
+            lemmaWord = lemmatizer.lemmatize(word)
+            if lemmaWord not in stopwords and len(lemmaWord) > 1:
+                wordFrequency[lemmaWord] += 1
 
         maxFrequency = max(wordFrequency.values())
 
@@ -132,8 +138,9 @@ def summarize(pdfText, numOfSentencesInSummary):
         for idx, sentence in enumerate(sentences):
             score = 0
             for word in nltk.word_tokenize(sentence.lower()):
-                if word in wordScore and len(sentence.split(' ')) < 30:
-                    score += wordScore[word]
+                lemmaWord = lemmatizer.lemmatize(word)
+                if lemmaWord in wordScore and len(sentence.split(' ')) < 30:
+                    score += wordScore[lemmaWord]
             heapq.heappush(heap, (-score, sentence))  # use min heap to keep track of the highest scoring sentences
             sentenceIndex[sentence] = idx  # keep track of where this sentence appeared from the beginning of the text
         return heap, sentenceIndex
