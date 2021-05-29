@@ -1,7 +1,7 @@
 # pdf_sumry
-## _When you're too lazy to read an entire pdf_
+## _When you don't have time to read a 500 page pdf_
 
-This is a Python script that can summarize an entire pdf or a range of its pages.
+This is a Python script that summarizes an entire pdf or a range of its pages.
 
 ## How to Run
 This project uses pipenv to manage and install its dependencies. Ensure you have pipenv installed on your computer.
